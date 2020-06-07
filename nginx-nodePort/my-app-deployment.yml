@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:  
+  name: my-app-config
+data:
+  application.conf: |+
+      server {
+        listen 80;
+
+        location / {
+            default_type text/html;
+            expires -1;
+            return 200 '<div>
+            <p><span>Server&nbsp;address:</span> <span>$server_addr:$server_port</span></p>
+            <p><span>Server&nbsp;name:</span> <span>$hostname</span></p>
+            <p><span>Date:</span> <span> $time_local</span></p>
+            <p><span>URI:</span> <span>$request_uri</span></p>
+            <p><span>Request Id:</span> <span>$request_id</span></p>
+            </div>';
+        }
+      }
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+  labels:
+    app: tomcat
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: my-app-k8s
+  template:
+    metadata:
+      labels:
+        app: my-app-k8s
+    spec:
+      containers:
+      - name: my-app-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        imagePullPolicy: Never
+        volumeMounts:
+        - mountPath: /etc/nginx/conf.d/
+          name: my-app-config-volume
+      volumes:
+      - configMap:
+          items:
+          - key: application.conf
+            path: application.conf 
+          name: my-app-config
+        name: my-app-config-volume
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: my-app-service
+spec:
+  selector:
+    app: my-app-k8s
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+    targetPort: 80
+    nodePort: 30007
+  type: NodePort

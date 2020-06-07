@@ -1,1 +1,1 @@
-# k8s-practice
+# This repo is to explore and learn different k8s concepts
